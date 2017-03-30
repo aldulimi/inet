@@ -60,7 +60,7 @@ void Packet::setHeaderPopOffset(bit offset)
 std::shared_ptr<Chunk> Packet::peekHeader(bit length, int flags) const
 {
     assert(bit(-1) <= length && length <= getDataLength());
-    return contents == nullptr ? nullptr : contents->peek(headerIterator, length, flags);
+    return (contents == nullptr && (flags & Chunk::PF_ALLOW_NULLPTR)) ? nullptr : contents->peek(headerIterator, length, flags);
 }
 
 std::shared_ptr<Chunk> Packet::popHeader(bit length, int flags)
@@ -111,7 +111,7 @@ void Packet::setTrailerPopOffset(bit offset)
 std::shared_ptr<Chunk> Packet::peekTrailer(bit length, int flags) const
 {
     assert(bit(-1) <= length && length <= getDataLength());
-    return contents == nullptr ? nullptr : contents->peek(trailerIterator, length, flags);
+    return (contents == nullptr && (flags & Chunk::PF_ALLOW_NULLPTR)) ? nullptr : contents->peek(trailerIterator, length, flags);
 }
 
 std::shared_ptr<Chunk> Packet::popTrailer(bit length, int flags)
@@ -151,7 +151,7 @@ std::shared_ptr<Chunk> Packet::peekDataAt(bit offset, bit length, int flags) con
 {
     assert(bit(0) <= offset && offset <= getDataLength());
     assert(bit(-1) <= length && length <= getDataLength());
-    if (contents == nullptr)
+    if ((contents == nullptr && (flags & Chunk::PF_ALLOW_NULLPTR)))
         return nullptr;
     else {
         bit peekOffset = headerIterator.getPosition() + offset;
@@ -164,7 +164,7 @@ std::shared_ptr<Chunk> Packet::peekAt(bit offset, bit length, int flags) const
 {
     assert(bit(0) <= offset && offset <= getTotalLength());
     assert(bit(-1) <= length && length <= getTotalLength());
-    if (contents == nullptr)
+    if ((contents == nullptr && (flags & Chunk::PF_ALLOW_NULLPTR)))
         return nullptr;
     else {
         bit peekLength = length == bit(-1) ? getTotalLength() - offset : length;
