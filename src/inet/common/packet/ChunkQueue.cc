@@ -34,26 +34,32 @@ ChunkQueue::ChunkQueue(const ChunkQueue& other) :
 
 void ChunkQueue::remove(bit length)
 {
+    assert(bit(-1) <= length && length <= getLength());
     poppedLength += length;
     contents->moveIterator(iterator, length);
     auto position = iterator.getPosition();
-    if (position > contents->getChunkLength() / 2) {
+    auto chunkLength = contents->getChunkLength();
+    if (position == chunkLength) {
+        contents = EmptyChunk::singleton;
         contents->seekIterator(iterator, bit(0));
-        contents = contents->peek(position, contents->getChunkLength() - position, Chunk::PF_ALLOW_NULLPTR);
+    }
+    else if (position > chunkLength / 2) {
+        contents = contents->peek(position, contents->getChunkLength() - position);
+        contents->seekIterator(iterator, bit(0));
     }
 }
 
 std::shared_ptr<Chunk> ChunkQueue::peek(bit length, int flags) const
 {
     assert(bit(-1) <= length && length <= getLength());
-    return contents == nullptr ? nullptr : contents->peek(iterator, length, flags);
+    return contents->peek(iterator, length, flags);
 }
 
 std::shared_ptr<Chunk> ChunkQueue::peekAt(bit offset, bit length, int flags) const
 {
     assert(bit(0) <= offset && offset <= getLength());
     assert(bit(-1) <= length && length <= getLength());
-    return contents == nullptr ? nullptr : contents->peek(Chunk::Iterator(true, iterator.getPosition() + offset, -1), length, flags);
+    return contents->peek(Chunk::Iterator(true, iterator.getPosition() + offset, -1), length, flags);
 }
 
 std::shared_ptr<Chunk> ChunkQueue::pop(bit length, int flags)
@@ -67,11 +73,9 @@ std::shared_ptr<Chunk> ChunkQueue::pop(bit length, int flags)
 
 void ChunkQueue::clear()
 {
-    if (contents != nullptr) {
-        poppedLength += getLength();
-        contents->seekIterator(iterator, bit(0));
-        contents = nullptr;
-    }
+    poppedLength += getLength();
+    contents->seekIterator(iterator, bit(0));
+    contents = EmptyChunk::singleton;
 }
 
 void ChunkQueue::push(const std::shared_ptr<Chunk>& chunk)
@@ -79,7 +83,7 @@ void ChunkQueue::push(const std::shared_ptr<Chunk>& chunk)
     assert(chunk != nullptr);
     assert(chunk->isImmutable());
     pushedLength += chunk->getChunkLength();
-    if (contents == nullptr)
+    if (contents == EmptyChunk::singleton)
         contents = chunk;
     else {
         if (contents->canInsertAtEnd(chunk)) {
@@ -95,6 +99,7 @@ void ChunkQueue::push(const std::shared_ptr<Chunk>& chunk)
             sequenceChunk->insertAtEnd(contents);
             sequenceChunk->insertAtEnd(chunk);
             contents = sequenceChunk;
+            contents->seekIterator(iterator, iterator.getPosition());
         }
         contents->markImmutable();
     }

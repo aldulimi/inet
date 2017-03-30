@@ -235,6 +235,7 @@ class INET_API Chunk : public cObject, public std::enable_shared_from_this<Chunk
      * This enum is used to avoid std::dynamic_cast and std::dynamic_pointer_cast.
      */
     enum ChunkType {
+        CT_EMPTY,
         CT_BITCOUNT,
         CT_BITS,
         CT_BYTECOUNT,
